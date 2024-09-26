@@ -4,6 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Formulário com Pesquisa Firebase</title>
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    table, th, td {
+      border: 1px solid black;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: left;
+    }
+
+    img {
+      width: 100px;
+      height: auto;
+    }
+  </style>
 </head>
 <body>
   <h1>Registro de Nome e Foto</h1>
@@ -33,6 +53,21 @@
     <p id="resultado-nome"></p>
     <img id="resultado-foto" alt="Foto" style="width: 200px; height: auto;">
   </div>
+
+  <hr>
+
+  <!-- Tabela de Últimos Registros -->
+  <h2>Últimos 3 Registros Inseridos</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Foto</th>
+      </tr>
+    </thead>
+    <tbody id="ultimos-registros">
+    </tbody>
+  </table>
 
   <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
@@ -68,10 +103,12 @@
           // Salvar o nome e URL da imagem no Firestore
           db.collection('registros').add({
             nome: nome,
-            fotoURL: downloadURL
+            fotoURL: downloadURL,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp() // Adicionar timestamp
           }).then(() => {
             alert('Dados salvos com sucesso!');
             document.getElementById('form-registro').reset(); // Limpar o formulário
+            mostrarUltimosRegistros(); // Atualizar a tabela após salvar
           }).catch(error => {
             console.error('Erro ao salvar no Firestore: ', error);
           });
@@ -103,6 +140,41 @@
           console.error('Erro ao buscar o registro: ', error);
         });
     });
+
+    // Função para mostrar os 3 últimos registros
+    function mostrarUltimosRegistros() {
+      db.collection('registros')
+        .orderBy('timestamp', 'desc') // Ordenar pelos mais recentes
+        .limit(3) // Limitar a 3 registros
+        .get()
+        .then(snapshot => {
+          const tbody = document.getElementById('ultimos-registros');
+          tbody.innerHTML = ''; // Limpar tabela
+
+          snapshot.forEach(doc => {
+            const dados = doc.data();
+            const tr = document.createElement('tr');
+
+            const tdNome = document.createElement('td');
+            tdNome.textContent = dados.nome;
+            tr.appendChild(tdNome);
+
+            const tdFoto = document.createElement('td');
+            const img = document.createElement('img');
+            img.src = dados.fotoURL;
+            tdFoto.appendChild(img);
+            tr.appendChild(tdFoto);
+
+            tbody.appendChild(tr);
+          });
+        })
+        .catch(error => {
+          console.error('Erro ao buscar os últimos registros: ', error);
+        });
+    }
+
+    // Chamar a função ao carregar a página
+    mostrarUltimosRegistros();
   </script>
 </body>
 </html>
