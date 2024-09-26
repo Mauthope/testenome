@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulário com Pesquisa Firebase</title>
+</head>
+<body>
+  <h1>Registro de Nome e Foto</h1>
+
+  <!-- Formulário de Registro -->
+  <form id="form-registro">
+    <label for="nome">Nome:</label>
+    <input type="text" id="nome" required>
+    <br>
+    <label for="foto">Foto:</label>
+    <input type="file" id="foto" accept="image/*" required>
+    <br>
+    <button type="submit">Salvar</button>
+  </form>
+
+  <hr>
+
+  <!-- Campo de Pesquisa -->
+  <h2>Pesquisar Registro</h2>
+  <label for="pesquisa-nome">Nome:</label>
+  <input type="text" id="pesquisa-nome">
+  <button id="btn-pesquisa">Pesquisar</button>
+
+  <!-- Resultado da Pesquisa -->
+  <div id="resultado">
+    <h3>Resultado:</h3>
+    <p id="resultado-nome"></p>
+    <img id="resultado-foto" alt="Foto" style="width: 200px; height: auto;">
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-storage.js"></script>
+
+  <script>
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "SEU_DOMINIO",
+      projectId: "SEU_ID_PROJETO",
+      storageBucket: "SEU_BUCKET",
+      messagingSenderId: "SEU_SENDER_ID",
+      appId: "SEU_APP_ID"
+    };
+
+    // Inicializando Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // Função para salvar dados no Firestore e Storage
+    document.getElementById('form-registro').addEventListener('submit', function(e) {
+      e.preventDefault(); // Evitar recarregar a página
+
+      const nome = document.getElementById('nome').value;
+      const foto = document.getElementById('foto').files[0];
+
+      // Salvar a imagem no Firebase Storage
+      const storageRef = storage.ref('fotos/' + foto.name);
+      storageRef.put(foto).then(snapshot => {
+        snapshot.ref.getDownloadURL().then(downloadURL => {
+          // Salvar o nome e URL da imagem no Firestore
+          db.collection('registros').add({
+            nome: nome,
+            fotoURL: downloadURL
+          }).then(() => {
+            alert('Dados salvos com sucesso!');
+            document.getElementById('form-registro').reset(); // Limpar o formulário
+          }).catch(error => {
+            console.error('Erro ao salvar no Firestore: ', error);
+          });
+        });
+      }).catch(error => {
+        console.error('Erro ao salvar a foto no Storage: ', error);
+      });
+    });
+
+    // Função de Pesquisa
+    document.getElementById('btn-pesquisa').addEventListener('click', function() {
+      const nomePesquisa = document.getElementById('pesquisa-nome').value;
+
+      // Procurar registro pelo nome no Firestore
+      db.collection('registros').where('nome', '==', nomePesquisa).get()
+        .then(snapshot => {
+          if (snapshot.empty) {
+            alert('Nenhum registro encontrado!');
+            return;
+          }
+
+          snapshot.forEach(doc => {
+            const dados = doc.data();
+            document.getElementById('resultado-nome').innerText = `Nome: ${dados.nome}`;
+            document.getElementById('resultado-foto').src = dados.fotoURL;
+          });
+        })
+        .catch(error => {
+          console.error('Erro ao buscar o registro: ', error);
+        });
+    });
+  </script>
+</body>
+</html>
